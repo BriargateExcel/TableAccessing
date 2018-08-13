@@ -20,7 +20,7 @@ Type ColumnFilterType
 End Type
 
 Private Sub test()
-        GetData Worksheets("Sheet1").ListObjects("ControlAccountTable"), 3, , "Control Account >= 8J6GM15223-02A"
+        GetData Worksheets("Sheet1").ListObjects("ControlAccountTable"), , , "Control Account >= 8J6GM15223-02A"
     '    GetData Worksheets("Sheet1").ListObjects("ControlAccountTable"), 3, , "Control Account=8J6GM15223-02A"
     '    GetData Worksheets("Sheet1").ListObjects("ControlAccountTable"), 3, , "Control Account =8J6GM15223-02A"
     '    GetData Worksheets("Sheet1").ListObjects("ControlAccountTable"), 3, , "Control Account= 8J6GM15223-02A"
@@ -208,7 +208,7 @@ Public Function GetData( _
         
         Dim RowCount As Long
         On Error Resume Next
-            RowCount = SearchTable.Range.SpecialCells(xlCellTypeVisible).Rows.Count
+            RowCount = SearchTable.DataBodyRange.Columns(1).SpecialCells(xlCellTypeVisible).Cells.Count
             If Err.Number <> 0 Then RowCount = 0
         On Error GoTo 0
     Else
@@ -247,7 +247,6 @@ Public Function GetData( _
                     GetData.Data = SearchTable.DataBodyRange.Rows(RowNumber)
                 Case Else ' 1 row, unspecified columns, filter=multiple rows; one row
                     GetData.Data = SearchTable.DataBodyRange.Rows(RowNumber)
-                    GetData.RowCount = RowCount
                 End Select
             Else ' 1 row, unspecified column, empty filter; entire row
                 GetData.Data = SearchTable.DataBodyRange.Rows(RowNumber)
@@ -286,7 +285,9 @@ Public Function GetData( _
                 Case 1 ' unspecified row, unspecified column, filter=1 row; one row, all columns
                     GetData.Data = SearchTable.DataBodyRange.SpecialCells(xlCellTypeVisible)
                 Case Else ' unspecified row, unspecified column, filter=multiple rows; multiple rows, all columns
-                    GetData.Data = SearchTable.DataBodyRange.SpecialCells(xlCellTypeVisible)
+                    Dim TempRange As Range
+                    Set TempRange = SearchTable.Range.SpecialCells(xlCellTypeVisible)
+                    GetData.Data = SearchTable.DataBodyRange.SpecialCells(xlCellTypeVisible).Rows '.Cells '.AutoFilter '.Rows '   .Cells
                     GetData.RowCount = RowCount
                 End Select
             Else ' empty row, empty column, empty filter; entire table
