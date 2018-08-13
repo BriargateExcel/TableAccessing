@@ -1,6 +1,12 @@
 Attribute VB_Name = "TableAccess"
 Option Explicit
 
+Type DataAccessedType
+    RowCount As Long
+    ColumnCount As Long
+    Data As Variant
+End Type
+
 Type ColumnDesignatorType
     ColumnName As String
     ColumnNumber As Long
@@ -13,8 +19,8 @@ Type ColumnFilterType
     Operand As String
 End Type
 
-Sub test()
-    '    GetData Worksheets("Sheet1").ListObjects("ControlAccountTable"), 3, , "Control Account = 8J6GM15223-02A"
+Private Sub test()
+        GetData Worksheets("Sheet1").ListObjects("ControlAccountTable"), 3, , "Control Account >= 8J6GM15223-02A"
     '    GetData Worksheets("Sheet1").ListObjects("ControlAccountTable"), 3, , "Control Account=8J6GM15223-02A"
     '    GetData Worksheets("Sheet1").ListObjects("ControlAccountTable"), 3, , "Control Account =8J6GM15223-02A"
     '    GetData Worksheets("Sheet1").ListObjects("ControlAccountTable"), 3, , "Control Account= 8J6GM15223-02A"
@@ -51,7 +57,7 @@ Public Function GetData( _
        Optional ByVal RowDesignator As Variant = "Empty", _
        Optional ByVal ColumnDesignator As String = "Empty", _
        Optional ByVal ColumnFilter As String = "Empty" _
-       ) As Variant
+       ) As DataAccessedType
     
     ' Future:
     ' Need provisions for multiple filters; "And" only; no "Or"
@@ -135,7 +141,7 @@ Public Function GetData( _
         ' Valid Table
     Else
         ' Invalid Table
-        GetData = "Error Search Table"
+        GetData.Data = "Error Search Table"
         Exit Function
     End If
     
@@ -143,13 +149,19 @@ Public Function GetData( _
     Dim RowNumber As Long
     Dim TempRowDesignator As Variant
     TempRowDesignator = ValidRowDesignator(SearchTable, RowDesignator)
-    If TempRowDesignator = "Error" Then
-        GetData = "Error Row Designator"
+    Select Case TempRowDesignator
+    Case "Error"
+        ' Invalid RowDesignator
+        GetData.Data = "Error Row Designator"
         Exit Function
-    Else
-        ' Valid RowDesignator
+    Case "Empty"
+        ' Empty RowDesignator
+        RowNumber = 0
+    Case Else
+        ' RowDesignator must be a number
         RowNumber = TempRowDesignator
-    End If
+        GetData.RowCount = 1
+    End Select
     
     ' Verify that ColumnDesignator is a valid column
     Dim ColumnName As String
@@ -159,12 +171,15 @@ Public Function GetData( _
     If TempColumnDesignator.ColumnName = "Error" Then
         ColumnName = "Error"
         ColumnNumber = 0
+        Exit Function
     Else
-        ColumnName = ColumnDesignator
+        ' Valid ColumnDesignator
+        ColumnName = TempColumnDesignator.ColumnName
         ColumnNumber = TempColumnDesignator.ColumnNumber
+        GetData.ColumnCount = 1
     End If
     
-    ' Verify that ColumnFilter is a valid column
+    ' Verify that ColumnFilter is valid and parse it
     Dim FilterColumnName As String
     Dim FilterColumnNumber As Long
     Dim FilterOperator As String
@@ -176,16 +191,115 @@ Public Function GetData( _
         FilterColumnNumber = 0
         FilterOperator = vbNullString
         FilterOperand = vbNullString
+        Exit Function
     Else
+        ' Valid ColumnFilter
         FilterColumnName = TempFilterValues.ColumnName
         FilterColumnNumber = TempFilterValues.ColumnNumber
         FilterOperator = TempFilterValues.Operator
         FilterOperand = TempFilterValues.Operand
     End If
     
+    If FilterColumnName <> "Error" Then
+        Dim FilterCriteria As String
+        FilterCriteria = FilterOperator & FilterOperand
+        
+        SearchTable.Range.AutoFilter Field:=FilterColumnNumber, Criteria1:=FilterCriteria
+        
+        Dim RowCount As Long
+        On Error Resume Next
+            RowCount = SearchTable.Range.SpecialCells(xlCellTypeVisible).Rows.Count
+            If Err.Number <> 0 Then RowCount = 0
+        On Error GoTo 0
+    Else
+        ' Invalid ColumnFilter
+        GetData.Data = "Error Column Filter"
+    End If
+    
+    If RowDesignator <> "Empty" Then
+        ' Valid RowDesignator
+        If ColumnDesignator <> "Empty" Then
+            ' Valid ColumnDesignator
+            If ColumnFilter <> "Empty" Then
+                ' Valid ColumnFilter
+                Select Case RowCount
+                Case 0 ' 1 row, 1 column, filter=0 rows; no data
+                    GetData.Data = "Empty"
+                    GetData.RowCount = 0
+                    GetData.ColumnCount = 0
+                Case 1 ' 1 row, 1 column, filter=1 row; one cell
+                    GetData.Data = SearchTable.DataBodyRange(RowNumber, ColumnNumber)
+                Case Else ' 1 row, 1 column, filter=multiple rows; one cell
+                    GetData.Data = SearchTable.DataBodyRange(RowNumber, ColumnNumber)
+                End Select
+            Else ' 1 row, 1 column, empty filter; one cell
+                GetData.Data = SearchTable.DataBodyRange(RowNumber, ColumnNumber)
+            End If ' ColumnFilter <> "Empty"
+        Else
+            ' Empty ColumnDesignator
+            GetData.ColumnCount = SearchTable.DataBodyRange.Columns.Count
+            If ColumnFilter <> "Empty" Then
+                ' Valid ColumnFilter
+                Select Case RowCount
+                Case 0 ' 1 row, unspecified columns, filter=0 rows; no data
+                    GetData.Data = "Empty"
+                Case 1 ' 1 row, unspecified columns, filter=1 row; one row
+                    GetData.Data = SearchTable.DataBodyRange.Rows(RowNumber)
+                Case Else ' 1 row, unspecified columns, filter=multiple rows; one row
+                    GetData.Data = SearchTable.DataBodyRange.Rows(RowNumber)
+                    GetData.RowCount = RowCount
+                End Select
+            Else ' 1 row, unspecified column, empty filter; entire row
+                GetData.Data = SearchTable.DataBodyRange.Rows(RowNumber)
+            End If ' ColumnFilter <> "Empty"
+        End If ' ColumnDesignator <> "Empty"
+    Else
+        ' Empty RowDesignator
+        If ColumnDesignator <> "Empty" Then
+            ' Valid ColumnDesignator
+            If ColumnFilter <> "Empty" Then
+                ' Valid ColumnFilter
+                Select Case RowCount
+                Case 0 ' unspecified row, 1 column, filter=0 rows; no data
+                    GetData.Data = "Empty"
+                    GetData.RowCount = 0
+                    GetData.ColumnCount = 0
+                Case 1 ' unspecified row, 1 column, filter=1 row, one cell
+                    GetData.Data = SearchTable.DataBodyRange.SpecialCells(xlCellTypeVisible).Columns(ColumnNumber)
+                Case Else ' unspecified row, 1 column, filter=multiple rows; one column
+                    GetData.Data = SearchTable.DataBodyRange.SpecialCells(xlCellTypeVisible).Columns(ColumnNumber)
+                    GetData.RowCount = RowCount
+                End Select
+            Else ' empty row, one column, empty filter; one entire column
+                GetData.Data = SearchTable.DataBodyRange.Columns(ColumnNumber)
+            End If ' ColumnFilter <> "Empty"
+        Else
+            ' Empty ColumnDesignator
+            GetData.ColumnCount = SearchTable.DataBodyRange.Columns.Count
+            If ColumnFilter <> "Empty" Then
+                ' Valid ColumnFilter
+                Select Case RowCount
+                Case 0 ' unspecified row, unspecified column, filter=0 rows; no data
+                    GetData.Data = "Empty"
+                    GetData.RowCount = 0
+                    GetData.ColumnCount = 0
+                Case 1 ' unspecified row, unspecified column, filter=1 row; one row, all columns
+                    GetData.Data = SearchTable.DataBodyRange.SpecialCells(xlCellTypeVisible)
+                Case Else ' unspecified row, unspecified column, filter=multiple rows; multiple rows, all columns
+                    GetData.Data = SearchTable.DataBodyRange.SpecialCells(xlCellTypeVisible)
+                    GetData.RowCount = RowCount
+                End Select
+            Else ' empty row, empty column, empty filter; entire table
+                GetData.Data = SearchTable.DataBodyRange
+            End If ' ColumnFilter <> "Empty"
+        End If ' ColumnDesignator <> "Empty"
+    End If ' RowDesignator <> "Empty"
+    
 End Function
 
 Private Function ValidSearchTable(ByVal SearchTable As ListObject) As Boolean
+' Assumes SearchTable is a valid ListObject
+
     Dim CheckForValidSearchTable As String
     ValidSearchTable = True
     On Error GoTo 0
@@ -201,6 +315,8 @@ Private Function ValidRowDesignator( _
         ByVal SearchTable As ListObject, _
         ByVal RowDesignator As Variant _
         ) As Variant
+
+' Assumes SearchTable is a valid ListObject
     
     If RowDesignator = "Empty" Then
         ' Empty is a valid entry; means return an entire column
@@ -229,6 +345,8 @@ Private Function ValidColumnDesignator( _
         ByVal ColumnDesignator As Variant _
         ) As ColumnDesignatorType
     
+' Assumes SearchTable is a valid ListObject
+
     If ColumnDesignator = "Empty" Then
         ' "Empty" is a valid entry; means return an entire row
         ' Set ColumnNumber to 0 as a flag
@@ -259,6 +377,8 @@ Private Function ValidFilter( _
         ByVal ColumnFilter As String _
         ) As ColumnFilterType
     
+' Assumes SearchTable is a valid ListObject
+
     If ColumnFilter = "Empty" Then
         ' "Empty" is a valid ColumnFilter value
         ValidFilter.ColumnName = "Empty"
@@ -287,6 +407,15 @@ Private Function ValidFilter( _
                 Else
                     ValidFilter.ColumnName = Mid$(ColumnFilter, 1, I - 1)
                 End If
+                
+                Dim TempValidColumnDesignator As ColumnDesignatorType
+                TempValidColumnDesignator = ValidColumnDesignator(SearchTable, ValidFilter.ColumnName)
+                If TempValidColumnDesignator.ColumnName = "Error" Then
+                    ValidFilter.ColumnName = "Error"
+                    Exit Function
+                End If
+                ValidFilter.ColumnNumber = TempValidColumnDesignator.ColumnNumber
+                
                 If NextChar = " " Then
                     ValidFilter.Operand = Mid$(ColumnFilter, I + 2, Len(ColumnFilter) - I - 1)
                 Else
@@ -299,7 +428,6 @@ Private Function ValidFilter( _
                     EndOfColumnName = EndOfColumnName - 1
                 Wend
                 
-                
                 Select Case NextChar
                 Case "="
                     ValidFilter.Operator = "<="
@@ -310,6 +438,14 @@ Private Function ValidFilter( _
                     Wend
                     
                     ValidFilter.ColumnName = Mid$(ColumnFilter, 1, EndOfColumnName)
+                
+                    TempValidColumnDesignator = ValidColumnDesignator(SearchTable, ValidFilter.ColumnName)
+                    If TempValidColumnDesignator.ColumnName = "Error" Then
+                        ValidFilter.ColumnName = "Error"
+                        Exit Function
+                    End If
+                    ValidFilter.ColumnNumber = TempValidColumnDesignator.ColumnNumber
+                
                     ValidFilter.Operand = Mid$(ColumnFilter, StartOfOperand, Len(ColumnFilter) - StartOfOperand + 1)
                     Exit For
                 Case ">"
@@ -321,6 +457,14 @@ Private Function ValidFilter( _
                     Wend
                     
                     ValidFilter.ColumnName = Mid$(ColumnFilter, 1, EndOfColumnName)
+                
+                    TempValidColumnDesignator = ValidColumnDesignator(SearchTable, ValidFilter.ColumnName)
+                    If TempValidColumnDesignator.ColumnName = "Error" Then
+                        ValidFilter.ColumnName = "Error"
+                        Exit Function
+                    End If
+                    ValidFilter.ColumnNumber = TempValidColumnDesignator.ColumnNumber
+                
                     ValidFilter.Operand = Mid$(ColumnFilter, StartOfOperand, Len(ColumnFilter) - StartOfOperand + 1)
                     Exit For
                 Case Else
@@ -332,6 +476,14 @@ Private Function ValidFilter( _
                     Wend
                     
                     ValidFilter.ColumnName = Mid$(ColumnFilter, 1, EndOfColumnName)
+                
+                    TempValidColumnDesignator = ValidColumnDesignator(SearchTable, ValidFilter.ColumnName)
+                    If TempValidColumnDesignator.ColumnName = "Error" Then
+                        ValidFilter.ColumnName = "Error"
+                        Exit Function
+                    End If
+                    ValidFilter.ColumnNumber = TempValidColumnDesignator.ColumnNumber
+                
                     ValidFilter.Operand = Mid$(ColumnFilter, StartOfOperand, Len(ColumnFilter) - StartOfOperand + 1)
                     Exit For
                 End Select
@@ -350,6 +502,14 @@ Private Function ValidFilter( _
                     Wend
                     
                     ValidFilter.ColumnName = Mid$(ColumnFilter, 1, EndOfColumnName)
+                
+                    TempValidColumnDesignator = ValidColumnDesignator(SearchTable, ValidFilter.ColumnName)
+                    If TempValidColumnDesignator.ColumnName = "Error" Then
+                        ValidFilter.ColumnName = "Error"
+                        Exit Function
+                    End If
+                    ValidFilter.ColumnNumber = TempValidColumnDesignator.ColumnNumber
+                
                     ValidFilter.Operand = Mid$(ColumnFilter, StartOfOperand, Len(ColumnFilter) - StartOfOperand + 1)
                     Exit For
                 Else
@@ -361,6 +521,14 @@ Private Function ValidFilter( _
                     Wend
                     
                     ValidFilter.ColumnName = Mid$(ColumnFilter, 1, EndOfColumnName)
+                
+                    TempValidColumnDesignator = ValidColumnDesignator(SearchTable, ValidFilter.ColumnName)
+                    If TempValidColumnDesignator.ColumnName = "Error" Then
+                        ValidFilter.ColumnName = "Error"
+                        Exit Function
+                    End If
+                    ValidFilter.ColumnNumber = TempValidColumnDesignator.ColumnNumber
+                
                     ValidFilter.Operand = Mid$(ColumnFilter, StartOfOperand, Len(ColumnFilter) - StartOfOperand + 1)
                     Exit For
                 End If
