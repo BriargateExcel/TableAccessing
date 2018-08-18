@@ -16,24 +16,12 @@ Private Type ColumnDesignatorType
     ColumnNumber As Long
 End Type
 
-Private Type ColumnFilterType
-    ColumnName As String
-    ColumnNumber As Long
-    Operator As String
-    Operand As String
-End Type
-
-Private Type FilterData
-    Valid As Boolean
-    SearchTable As ListObject
-End Type
-
 Private Sub test()
 
-    Const Routine_Name As String = Module_Name & "CheckForVBAProjectAccessEnabled"
+    Const Routine_Name As String = Module_Name & "test"
     On Error GoTo ErrorHandler
     
-    GetData Worksheets("Sheet1").ListObjects("ControlAccountTable"), , , "CAM = Dye"
+    GetData Sheet1.ListObjects("ControlAccountTable"), , , "CAM = Dye"
     '    GetData Worksheets("Sheet1").ListObjects("ControlAccountTable"), 3, , "Control Account=8J6GM15223-02A"
     '    GetData Worksheets("Sheet1").ListObjects("ControlAccountTable"), 3, , "Control Account =8J6GM15223-02A"
     '    GetData Worksheets("Sheet1").ListObjects("ControlAccountTable"), 3, , "Control Account= 8J6GM15223-02A"
@@ -165,7 +153,7 @@ Public Function GetData( _
         Exit Function
     End If
     
-    ' Verify that RowDesignator is a valid row
+    ' Verify that RowDesignator is valid
     Dim RowNumber As Long
     Dim TempRowDesignator As Variant
     TempRowDesignator = ValidRowDesignator(SearchTable, RowDesignator)
@@ -180,19 +168,32 @@ Public Function GetData( _
         GetData.RowCount = 1
     End Select
     
-    ' Verify that ColumnDesignator is a valid column
+    ' Verify that ColumnDesignator is valid
+    Dim ColumnName As String
+    Dim ColumnNumber As Long
     Dim TempColumnDesignator As ColumnDesignatorType
     TempColumnDesignator = ValidColumnDesignator(SearchTable, ColumnDesignator)
+    Select Case TempColumnDesignator.ColumnName
+    Case "Error"                                 ' Invalid RowDesignator
+        GetData.Data = "Error Column Designator"
+        Exit Function
+    Case "Empty"                                 ' Empty RowDesignator
+        ColumnNumber = 0
+    Case Else                                    ' Conclude that RowDesignator must be a number
+        GetData.ColumnCount = 1
+        ColumnNumber = TempColumnDesignator.ColumnNumber
+    End Select
+    ColumnName = TempColumnDesignator.ColumnName
     
     ' Verify that ColumnFilter is valid and set up the SearchTable
-    Dim ThisSearchTable As FilterData
-    ThisSearchTable = ValidFilter(SearchTable, ColumnFilter)
-    If ThisSearchTable.Valid Then
-        Dim RowCount As Long
-        RowCount = ThisSearchTable.SearchTable.DataBodyRange.Columns(1).Cells.Count
-    Else
+    Dim ThisSearchTable As Variant
+    Set ThisSearchTable = ValidFilter(SearchTable, ColumnFilter)
+    If ThisSearchTable = "Error" Then
         GetData.Data = "Error Bad ColumnFilter"
         Exit Function
+    Else
+        Dim RowCount As Long
+        RowCount = ThisSearchTable.DataBodyRange.Columns(1).Cells.Count
     End If
     
     If RowDesignator <> "Empty" Then             ' Valid RowDesignator
@@ -204,12 +205,12 @@ Public Function GetData( _
                     GetData.RowCount = 0
                     GetData.ColumnCount = 0
                 Case 1                           ' 1 row, 1 column, filter=1 row; one cell
-                    GetData.Data = ThisSearchTable.SearchTable.DataBodyRange(RowNumber, TempColumnDesignator.ColumnNumber)
+                    GetData.Data = ThisSearchTable.SearchTable.DataBodyRange(RowNumber, ColumnNumber)
                 Case Else                        ' 1 row, 1 column, filter=multiple rows; one cell
-                    GetData.Data = ThisSearchTable.SearchTable.DataBodyRange(RowNumber, TempColumnDesignator.ColumnNumber)
+                    GetData.Data = ThisSearchTable.SearchTable.DataBodyRange(RowNumber, ColumnNumber)
                 End Select
             Else                                 ' 1 row, 1 column, empty filter; one cell
-                GetData.Data = ThisSearchTable.SearchTable.DataBodyRange(RowNumber, TempColumnDesignator.ColumnNumber)
+                GetData.Data = ThisSearchTable.SearchTable.DataBodyRange(RowNumber, ColumnNumber)
             End If                               ' ColumnFilter <> "Empty"
         Else                                     ' Empty ColumnDesignator
             GetData.ColumnCount = ThisSearchTable.SearchTable.DataBodyRange.Columns.Count
@@ -236,16 +237,16 @@ Public Function GetData( _
                     GetData.RowCount = 0
                     GetData.ColumnCount = 0
                 Case 1                           ' unspecified row, 1 column, filter=1 row, one cell
-                    GetData.Data = ThisSearchTable.SearchTable.DataBodyRange.Columns(TempColumnDesignator.ColumnNumber)
+                    GetData.Data = ThisSearchTable.DataBodyRange.Columns(ColumnNumber)
                 Case Else                        ' unspecified row, 1 column, filter=multiple rows; one column
-                    GetData.Data = ThisSearchTable.SearchTable.DataBodyRange.Columns(TempColumnDesignator.ColumnNumber)
+                    GetData.Data = ThisSearchTable.DataBodyRange.Columns(ColumnNumber)
                     GetData.RowCount = RowCount
                 End Select
             Else                                 ' empty row, one column, empty filter; one entire column
-                GetData.Data = ThisSearchTable.SearchTable.DataBodyRange.Columns(TempColumnDesignator.ColumnNumber)
+                GetData.Data = ThisSearchTable.DataBodyRange.Columns(ColumnNumber)
             End If                               ' ColumnFilter <> "Empty"
         Else                                     ' Empty ColumnDesignator
-            GetData.ColumnCount = ThisSearchTable.SearchTable.DataBodyRange.Columns.Count
+            GetData.ColumnCount = ThisSearchTable.DataBodyRange.Columns.Count
             If ColumnFilter <> "Empty" Then      ' Valid ColumnFilter
                 Select Case RowCount
                 Case 0                           ' unspecified row, unspecified column, filter=0 rows; no data
@@ -253,27 +254,24 @@ Public Function GetData( _
                     GetData.RowCount = 0
                     GetData.ColumnCount = 0
                 Case 1                           ' unspecified row, unspecified column, filter=1 row; one row, all columns
-                    GetData.Data = ThisSearchTable.SearchTable.DataBodyRange
+                    GetData.Data = ThisSearchTable.DataBodyRange
                 Case Else                        ' unspecified row, unspecified column, filter=multiple rows; multiple rows, all columns
-                    GetData.Data = ThisSearchTable.SearchTable.DataBodyRange
+                    GetData.Data = ThisSearchTable.DataBodyRange
                     GetData.RowCount = RowCount
                 End Select
             Else                                 ' empty row, empty column, empty filter; entire table
-                GetData.Data = ThisSearchTable.SearchTable.DataBodyRange
+                GetData.Data = ThisSearchTable.DataBodyRange
             End If                               ' ColumnFilter <> "Empty"
         End If                                   ' ColumnDesignator <> "Empty"
     End If                                       ' RowDesignator <> "Empty"
     
-    On Error Resume Next
-    Workbooks(Worksheets(TempWorkSheetName).Parent.Name).Activate
-    If Err.Number = 0 Then
-        Dim TempDisplayAlerts As Boolean
-        TempDisplayAlerts = Application.DisplayAlerts
-        Application.DisplayAlerts = False
-        Workbooks(Worksheets(TempWorkSheetName).Parent.Name).Worksheets(TempWorkSheetName).Delete
-        Application.DisplayAlerts = TempDisplayAlerts
-    End If
-    On Error GoTo ErrorHandler
+    
+    ' Delete the temporary worksheet
+    Dim TempDisplayAlerts As Boolean
+    TempDisplayAlerts = Application.DisplayAlerts
+    Application.DisplayAlerts = False
+    Workbooks(Worksheets(TempWorkSheetName).Parent.Name).Worksheets(TempWorkSheetName).Delete
+    Application.DisplayAlerts = TempDisplayAlerts
     
     '@Ignore LineLabelNotUsed
 Done:
@@ -390,19 +388,18 @@ End Function
 Private Function ValidFilter( _
         ByVal SearchTable As ListObject, _
         ByVal ColumnFilter As String _
-        ) As FilterData
+        ) As Variant
     
     ' Assumes SearchTable is a valid ListObject
 
     Const Routine_Name As String = Module_Name & "ValidFilter"
     On Error GoTo ErrorHandler
     
-    ValidFilter.Valid = True
-    Set ValidFilter.SearchTable = SearchTable
+    Set ValidFilter = SearchTable
         
     If ColumnFilter = "Empty" Then
         ' "Empty" is a valid ColumnFilter value
-        Set ValidFilter.SearchTable = Null
+        ValidFilter = "Empty"
     Else
         ' Parse the ColumnFilter
         Dim I As Long
@@ -433,8 +430,7 @@ Private Function ValidFilter( _
                 Dim TempValidColumnDesignator As ColumnDesignatorType
                 TempValidColumnDesignator = ValidColumnDesignator(SearchTable, ColumnName)
                 If TempValidColumnDesignator.ColumnName = "Error" Then
-                    ValidFilter.Valid = False
-                    Set ValidFilter.SearchTable = Null
+                    ValidFilter = "Error Bad Column Filter"
                     Exit Function
                 End If
                 ColumnNumber = TempValidColumnDesignator.ColumnNumber
@@ -464,8 +460,7 @@ Private Function ValidFilter( _
                 
                     TempValidColumnDesignator = ValidColumnDesignator(SearchTable, ColumnName)
                     If TempValidColumnDesignator.ColumnName = "Error" Then
-                        ValidFilter.Valid = False
-                        Set ValidFilter.SearchTable = Null
+                        ValidFilter = "Error Bad Column Filter"
                         Exit Function
                     End If
                     ColumnNumber = TempValidColumnDesignator.ColumnNumber
@@ -484,8 +479,7 @@ Private Function ValidFilter( _
                 
                     TempValidColumnDesignator = ValidColumnDesignator(SearchTable, ColumnName)
                     If TempValidColumnDesignator.ColumnName = "Error" Then
-                        ValidFilter.Valid = False
-                        Set ValidFilter.SearchTable = Null
+                        ValidFilter = "Error Bad Column Filter"
                         Exit Function
                     End If
                     ColumnNumber = TempValidColumnDesignator.ColumnNumber
@@ -530,8 +524,7 @@ Private Function ValidFilter( _
                 
                     TempValidColumnDesignator = ValidColumnDesignator(SearchTable, ColumnName)
                     If TempValidColumnDesignator.ColumnName = "Error" Then
-                        ValidFilter.Valid = False
-                        Set ValidFilter.SearchTable = Null
+                        ValidFilter = "Error Bad Column Filter"
                         Exit Function
                     End If
                     ColumnNumber = TempValidColumnDesignator.ColumnNumber
@@ -550,8 +543,7 @@ Private Function ValidFilter( _
                 
                     TempValidColumnDesignator = ValidColumnDesignator(SearchTable, ColumnName)
                     If TempValidColumnDesignator.ColumnName = "Error" Then
-                        ValidFilter.Valid = False
-                        Set ValidFilter.SearchTable = Null
+                        ValidFilter = "Error Bad Column Filter"
                         Exit Function
                     End If
                     ColumnNumber = TempValidColumnDesignator.ColumnNumber
@@ -565,7 +557,7 @@ Private Function ValidFilter( _
     
     Dim FilterCriteria As String
     FilterCriteria = Operator & Operand
-    Set ValidFilter.SearchTable = GetFilteredData(FilterCriteria, ColumnNumber, SearchTable)
+    Set ValidFilter = GetFilteredData(FilterCriteria, ColumnNumber, SearchTable)
     
     '@Ignore LineLabelNotUsed
 Done:
@@ -615,7 +607,6 @@ Private Function GetFilteredData( _
         Set TempWorkSheet = CurrentWorkBook.Sheets.Add(After:=CurrentWorkBook.Worksheets(Worksheets.Count))
         TempWorkSheet.Name = TempWorkSheetName
         
-'        TempWorkSheet.Activate
         TempWorkSheet.Range("$A$1").PasteSpecial
         TempWorkSheet.ListObjects.Add(xlSrcRange, TempWorkSheet.UsedRange, , xlYes).Name = "TempTable"
         Set GetFilteredData = TempWorkSheet.ListObjects("TempTable")
