@@ -21,7 +21,7 @@ Private Sub test()
     Const Routine_Name As String = Module_Name & "test"
     On Error GoTo ErrorHandler
     
-    GetData Sheet1.ListObjects("ControlAccountTable"), , , "CAM = Dye"
+    GetData ControlAccountsSheet.ListObjects("ControlAccountTable"), , , "CAM = Dye"
     '    GetData Worksheets("Sheet1").ListObjects("ControlAccountTable"), 3, , "Control Account=8J6GM15223-02A"
     '    GetData Worksheets("Sheet1").ListObjects("ControlAccountTable"), 3, , "Control Account =8J6GM15223-02A"
     '    GetData Worksheets("Sheet1").ListObjects("ControlAccountTable"), 3, , "Control Account= 8J6GM15223-02A"
@@ -65,6 +65,15 @@ Public Function GetData( _
        Optional ByVal ColumnDesignator As String = "Empty", _
        Optional ByVal ColumnFilter As String = "Empty" _
        ) As DataAccessedType
+    
+    ' Future:
+    ' Modify SearchTable to also be an array
+    ' Would need Column Headers in the first row else error
+    ' Could convert ListObjects to an array on entry
+    '   Then we could process everything as an array
+    '   Filtering would have to be done with a collection
+    '   Might be faster; no temp worksheet needed
+    '   Might be slower if it's a large table
     
     ' Future:
     ' Need provisions for multiple filters; "And" only; no "Or"
@@ -187,14 +196,19 @@ Public Function GetData( _
     
     ' Verify that ColumnFilter is valid and set up the SearchTable
     Dim ThisSearchTable As Variant
-    Set ThisSearchTable = ValidFilter(SearchTable, ColumnFilter)
-    If ThisSearchTable = "Error" Then
+    ThisSearchTable = ValidFilter(SearchTable, ColumnFilter)
+    Select Case ThisSearchTable
+    Case "Error"
         GetData.Data = "Error Bad ColumnFilter"
         Exit Function
-    Else
-        Dim RowCount As Long
-        RowCount = ThisSearchTable.DataBodyRange.Columns(1).Cells.Count
-    End If
+    Case "Empty"
+        Set ThisSearchTable = SearchTable
+    Case Else
+    End Select
+    Dim RowCount As Long
+    RowCount = ThisSearchTable.DataBodyRange.Columns(1).Cells.Count
+    
+    ' SearchTable, RowDesignator, ColumnDesignator, and ColumnFilter are all valid
     
     If RowDesignator <> "Empty" Then             ' Valid RowDesignator
         If ColumnDesignator <> "Empty" Then      ' Valid ColumnDesignator
@@ -265,12 +279,13 @@ Public Function GetData( _
         End If                                   ' ColumnDesignator <> "Empty"
     End If                                       ' RowDesignator <> "Empty"
     
-    
     ' Delete the temporary worksheet
     Dim TempDisplayAlerts As Boolean
     TempDisplayAlerts = Application.DisplayAlerts
     Application.DisplayAlerts = False
+    On Error Resume Next
     Workbooks(Worksheets(TempWorkSheetName).Parent.Name).Worksheets(TempWorkSheetName).Delete
+    On Error GoTo ErrorHandler
     Application.DisplayAlerts = TempDisplayAlerts
     
     '@Ignore LineLabelNotUsed
@@ -288,6 +303,7 @@ Private Function ValidSearchTable(ByVal SearchTable As ListObject) As Boolean
     On Error GoTo ErrorHandler
     
     Dim CheckForValidSearchTable As String
+    
     ValidSearchTable = True
     On Error GoTo 0
     CheckForValidSearchTable = SearchTable.Name
@@ -553,11 +569,12 @@ Private Function ValidFilter( _
                 End If
             End Select
         Next I
-    End If
+        
+        Dim FilterCriteria As String
+        FilterCriteria = Operator & Operand
+        Set ValidFilter = SetUpSearchTable(FilterCriteria, ColumnNumber, SearchTable)
+    End If ' ColumnFilter = "Empty"
     
-    Dim FilterCriteria As String
-    FilterCriteria = Operator & Operand
-    Set ValidFilter = GetFilteredData(FilterCriteria, ColumnNumber, SearchTable)
     
     '@Ignore LineLabelNotUsed
 Done:
@@ -567,57 +584,57 @@ ErrorHandler:
 
 End Function
 
-Private Function GetFilteredData( _
-    ByVal FilterCriteria As String, _
-    ByVal FilterColumnNumber As Long, _
-    ByVal SearchTable As ListObject _
-    ) As ListObject
+Private Function SetUpSearchTable( _
+        ByVal FilterCriteria As String, _
+        ByVal FilterColumnNumber As Long, _
+        ByVal SearchTable As ListObject _
+        ) As ListObject
     
     Const Routine_Name As String = Module_Name & "GetFilteredData"
     On Error GoTo ErrorHandler
     
-        Dim CurrentWorkBook As Workbook
-        Set CurrentWorkBook = Workbooks(Worksheets(SearchTable.Parent.Name).Parent.Name)
+    Dim CurrentWorkBook As Workbook
+    Set CurrentWorkBook = Workbooks(Worksheets(SearchTable.Parent.Name).Parent.Name)
         
-        Dim CurrentSheet As Worksheet
-        Set CurrentSheet = CurrentWorkBook.ActiveSheet
-        Worksheets(SearchTable.Parent.Name).Activate
+    Dim CurrentSheet As Worksheet
+    Set CurrentSheet = CurrentWorkBook.ActiveSheet
+    Worksheets(SearchTable.Parent.Name).Activate
         
-        SearchTable.DataBodyRange(1, 1).Activate
-        On Error Resume Next                     ' ShowAllData throws an error if the table is already completely unfiltered
-        ThisWorkbook.Worksheets(SearchTable.Parent.Name).ShowAllData
-        On Error GoTo ErrorHandler
+    SearchTable.DataBodyRange(1, 1).Activate
+    On Error Resume Next                         ' ShowAllData throws an error if the table is already completely unfiltered
+    ThisWorkbook.Worksheets(SearchTable.Parent.Name).ShowAllData
+    On Error GoTo ErrorHandler
         
-        On Error Resume Next
-        CurrentWorkBook.Worksheets(TempWorkSheetName).Activate
-        If Err.Number = 0 Then
-            Dim TempDisplayAlerts As Boolean
-            TempDisplayAlerts = Application.DisplayAlerts
-            Application.DisplayAlerts = False
-            CurrentWorkBook.Worksheets(TempWorkSheetName).Delete
-            Application.DisplayAlerts = TempDisplayAlerts
-        End If
-        On Error GoTo ErrorHandler
+    On Error Resume Next
+    CurrentWorkBook.Worksheets(TempWorkSheetName).Activate
+    If Err.Number = 0 Then
+        Dim TempDisplayAlerts As Boolean
+        TempDisplayAlerts = Application.DisplayAlerts
+        Application.DisplayAlerts = False
+        CurrentWorkBook.Worksheets(TempWorkSheetName).Delete
+        Application.DisplayAlerts = TempDisplayAlerts
+    End If
+    On Error GoTo ErrorHandler
         
-        CurrentWorkBook.Worksheets(SearchTable.Parent.Name).Activate
-        SearchTable.Range.AutoFilter Field:=FilterColumnNumber, Criteria1:=FilterCriteria
-        SearchTable.DataBodyRange.SpecialCells(xlCellTypeVisible).Copy
+    CurrentWorkBook.Worksheets(SearchTable.Parent.Name).Activate
+    SearchTable.Range.AutoFilter Field:=FilterColumnNumber, Criteria1:=FilterCriteria
+    SearchTable.DataBodyRange.SpecialCells(xlCellTypeVisible).Copy
         
-        Dim TempWorkSheet As Worksheet
-        Set TempWorkSheet = CurrentWorkBook.Sheets.Add(After:=CurrentWorkBook.Worksheets(Worksheets.Count))
-        TempWorkSheet.Name = TempWorkSheetName
+    Dim TempWorkSheet As Worksheet
+    Set TempWorkSheet = CurrentWorkBook.Sheets.Add(After:=CurrentWorkBook.Worksheets(Worksheets.Count))
+    TempWorkSheet.Name = TempWorkSheetName
         
-        TempWorkSheet.Range("$A$1").PasteSpecial
-        TempWorkSheet.ListObjects.Add(xlSrcRange, TempWorkSheet.UsedRange, , xlYes).Name = "TempTable"
-        Set GetFilteredData = TempWorkSheet.ListObjects("TempTable")
+    TempWorkSheet.Range("$A$1").PasteSpecial
+    TempWorkSheet.ListObjects.Add(xlSrcRange, TempWorkSheet.UsedRange, , xlYes).Name = "TempTable"
+    Set SetUpSearchTable = TempWorkSheet.ListObjects("TempTable")
         
-        CurrentWorkBook.Worksheets(SearchTable.Parent.Name).Activate
-        SearchTable.DataBodyRange(1, 1).Activate
-        On Error Resume Next                     ' ShowAllData throws an error if the table is already completely unfiltered
-        CurrentWorkBook.Worksheets(SearchTable.Parent.Name).ShowAllData
-        On Error GoTo ErrorHandler
+    CurrentWorkBook.Worksheets(SearchTable.Parent.Name).Activate
+    SearchTable.DataBodyRange(1, 1).Activate
+    On Error Resume Next                         ' ShowAllData throws an error if the table is already completely unfiltered
+    CurrentWorkBook.Worksheets(SearchTable.Parent.Name).ShowAllData
+    On Error GoTo ErrorHandler
         
-        CurrentSheet.Activate
+    CurrentSheet.Activate
         
     '@Ignore LineLabelNotUsed
 Done:
@@ -626,3 +643,5 @@ ErrorHandler:
     RaiseError Err.Number, Err.Source, Routine_Name, Err.Description
 
 End Function
+
+

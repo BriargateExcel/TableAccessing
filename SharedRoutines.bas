@@ -45,11 +45,65 @@ Public Sub DisplayError(ByVal Procname As String)
     Msg = "The following error occurred: " & vbCrLf & Err.Description _
         & vbCrLf & vbCrLf & "Error Location is: "
 
-    Msg = Msg + Err.Source & vbCrLf & Procname   ' & " " & src & " " & desc
+    Msg = Msg + Err.Source & vbCrLf & Procname
 
-    ' Display message
     MsgBox Msg, Title:="Error"
 End Sub                                          ' DisplayError
+
+Public Function NumberOfArrayDimensions(ByVal Arr As Variant) As Long
+    ' http://www.cpearson.com/excel/vbaarrays.htm
+    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    ' NumberOfArrayDimensions
+    ' This function returns the number of dimensions of an array. An unallocated dynamic array
+    ' has 0 dimensions. This condition can also be tested with IsArrayEmpty.
+    '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    Dim Ndx As Long
+    Dim Res As Long
+    
+    Const RoutineName As String = Module_Name & "NumberOfArrayDimensions"
+    On Error GoTo ErrorHandler
+    
+    On Error Resume Next
+    Res = UBound(Arr, 2)                         ' If Arr has only one element, this will fail
+    If Err.Number <> 0 Then
+        NumberOfArrayDimensions = 1
+        On Error GoTo ErrorHandler
+        Exit Function
+    End If
+    
+    On Error Resume Next
+    ' Loop, increasing the dimension index Ndx, until an error occurs.
+    ' An error will occur when Ndx exceeds the number of dimension
+    ' in the array. Return Ndx - 1.
+    Do
+        Ndx = Ndx + 1
+        Res = UBound(Arr, Ndx)
+    Loop Until Err.Number <> 0
+    
+    On Error GoTo ErrorHandler
+    
+    NumberOfArrayDimensions = Ndx - 1
+
+    '@Ignore LineLabelNotUsed
+Done:
+    Exit Function
+ErrorHandler:
+    RaiseError Err.Number, Err.Source, RoutineName, Err.Description
+
+End Function                                     ' NumberOfArrayDimensions
+
+Public Function IsArrayAllocated(Arr As Variant) As Boolean
+' http://www.cpearson.com/excel/isarrayallocated.aspx
+    On Error Resume Next
+    IsArrayAllocated = _
+                     IsArray(Arr) And _
+                     Not IsError(LBound(Arr, 1)) And _
+                     LBound(Arr, 1) <= UBound(Arr, 1)
+    On Error GoTo 0
+End Function
+
+
+
 
 'Public Sub Log(ParamArray Msg() As Variant)
 '    ' http://analystcave.com/vba-proper-vba-error-handling/
