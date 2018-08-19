@@ -11,28 +11,28 @@ Public Sub RaiseError( _
 
     ' https://excelmacromastery.com/vba-error-handling/
     ' Reraises an error and adds line number and current procedure name
-    
+
     Dim SourceOfError As String
-    
+
     ' Check if procedure where error occurs the line no and proc details
     If Src = ThisWorkbook.VBProject.Name Then
         ' Add error line number if present
         If Erl <> 0 Then
             SourceOfError = vbCrLf & "Line no: " & Erl & " "
         End If
-   
+
         ' Add procedure to source
         SourceOfError = SourceOfError & vbCrLf & Proc
-        
+
     Else
         ' If error has already been raised then just add on procedure name
         SourceOfError = Src & vbCrLf & Proc
     End If
-    
+
     ' If the code stops here,
     ' make sure DisplayError is placed in the top most Sub
     Err.Raise ErrorNo, SourceOfError, Desc
-    
+
 End Sub                                          ' RaiseError
 
 Public Sub DisplayError(ByVal Procname As String)
@@ -59,10 +59,10 @@ Public Function NumberOfArrayDimensions(ByVal Arr As Variant) As Long
     '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     Dim Ndx As Long
     Dim Res As Long
-    
+
     Const RoutineName As String = Module_Name & "NumberOfArrayDimensions"
     On Error GoTo ErrorHandler
-    
+
     On Error Resume Next
     Res = UBound(Arr, 2)                         ' If Arr has only one element, this will fail
     If Err.Number <> 0 Then
@@ -70,7 +70,7 @@ Public Function NumberOfArrayDimensions(ByVal Arr As Variant) As Long
         On Error GoTo ErrorHandler
         Exit Function
     End If
-    
+
     On Error Resume Next
     ' Loop, increasing the dimension index Ndx, until an error occurs.
     ' An error will occur when Ndx exceeds the number of dimension
@@ -79,9 +79,9 @@ Public Function NumberOfArrayDimensions(ByVal Arr As Variant) As Long
         Ndx = Ndx + 1
         Res = UBound(Arr, Ndx)
     Loop Until Err.Number <> 0
-    
+
     On Error GoTo ErrorHandler
-    
+
     NumberOfArrayDimensions = Ndx - 1
 
     '@Ignore LineLabelNotUsed
@@ -92,7 +92,7 @@ ErrorHandler:
 
 End Function                                     ' NumberOfArrayDimensions
 
-Public Function IsArrayAllocated(Arr As Variant) As Boolean
+Public Function IsArrayAllocated(ByVal Arr As Variant) As Boolean
 ' http://www.cpearson.com/excel/isarrayallocated.aspx
     On Error Resume Next
     IsArrayAllocated = _
