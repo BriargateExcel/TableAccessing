@@ -37,35 +37,37 @@ Private Sub test()
     
     ControlAccountsInitialize
     
-    GetData ControlAccountData, , , "CAM = Dye"
-    GetData ControlAccountData, 3, , "Control Account=8J6GM15223-02A"
-    GetData ControlAccountData, 3, , "Control Account =8J6GM15223-02A"
-    GetData ControlAccountData, 3, , "Control Account= 8J6GM15223-02A"
+    Dim Temp As TableType
     
-    GetData ControlAccountData, 3, , "Control Account < 8J6GM15223-02A"
-    GetData ControlAccountData, 3, , "Control Account<8J6GM15223-02A"
-    GetData ControlAccountData, 3, , "Control Account <= 8J6GM15223-02A"
-    GetData ControlAccountData, 3, , "Control Account <> 8J6GM15223-02A"
-    GetData ControlAccountData, 3, , "Control Account<=8J6GM15223-02A"
-    GetData ControlAccountData, 3, , "Control Account<>8J6GM15223-02A"
-    GetData ControlAccountData, 3, , "Control Account <8J6GM15223-02A"
-    GetData ControlAccountData, 3, , "Control Account <=8J6GM15223-02A"
-    GetData ControlAccountData, 3, , "Control Account <>8J6GM15223-02A"
-    GetData ControlAccountData, 3, , "Control Account< 8J6GM15223-02A"
-    GetData ControlAccountData, 3, , "Control Account<= 8J6GM15223-02A"
-    GetData ControlAccountData, 3, , "Control Account<> 8J6GM15223-02A"
+    Temp = GetData(ControlAccountData, , , "CAM = Dye")
+    Temp = GetData(ControlAccountData, 3, , "Control Account=8J6GM15223-02A")
+    Temp = GetData(ControlAccountData, 3, , "Control Account =8J6GM15223-02A")
+    Temp = GetData(ControlAccountData, 3, , "Control Account= 8J6GM15223-02A")
     
-    GetData ControlAccountData, 3, , "Control Account > 8J6GM15223-02A"
-    GetData ControlAccountData, 3, , "Control Account >= 8J6GM15223-02A"
+    Temp = GetData(ControlAccountData, 3, , "Control Account < 8J6GM15223-02A")
+    Temp = GetData(ControlAccountData, 3, , "Control Account<8J6GM15223-02A")
+    Temp = GetData(ControlAccountData, 3, , "Control Account <= 8J6GM15223-02A")
+    Temp = GetData(ControlAccountData, 3, , "Control Account <> 8J6GM15223-02A")
+    Temp = GetData(ControlAccountData, 3, , "Control Account<=8J6GM15223-02A")
+    Temp = GetData(ControlAccountData, 3, , "Control Account<>8J6GM15223-02A")
+    Temp = GetData(ControlAccountData, 3, , "Control Account <8J6GM15223-02A")
+    Temp = GetData(ControlAccountData, 3, , "Control Account <=8J6GM15223-02A")
+    Temp = GetData(ControlAccountData, 3, , "Control Account <>8J6GM15223-02A")
+    Temp = GetData(ControlAccountData, 3, , "Control Account< 8J6GM15223-02A")
+    Temp = GetData(ControlAccountData, 3, , "Control Account<= 8J6GM15223-02A")
+    Temp = GetData(ControlAccountData, 3, , "Control Account<> 8J6GM15223-02A")
     
-    GetData ControlAccountData, 3, , "Control Account>8J6GM15223-02A"
-    GetData ControlAccountData, 3, , "Control Account>=8J6GM15223-02A"
+    Temp = GetData(ControlAccountData, 3, , "Control Account > 8J6GM15223-02A")
+    Temp = GetData(ControlAccountData, 3, , "Control Account >= 8J6GM15223-02A")
     
-    GetData ControlAccountData, 3, , "Control Account >8J6GM15223-02A"
-    GetData ControlAccountData, 3, , "Control Account >=8J6GM15223-02A"
+    Temp = GetData(ControlAccountData, 3, , "Control Account>8J6GM15223-02A")
+    Temp = GetData(ControlAccountData, 3, , "Control Account>=8J6GM15223-02A")
     
-    GetData ControlAccountData, 3, , "Control Account> 8J6GM15223-02A"
-    GetData ControlAccountData, 3, , "Control Account>= 8J6GM15223-02A"
+    Temp = GetData(ControlAccountData, 3, , "Control Account >8J6GM15223-02A")
+    Temp = GetData(ControlAccountData, 3, , "Control Account >=8J6GM15223-02A")
+    
+    Temp = GetData(ControlAccountData, 3, , "Control Account> 8J6GM15223-02A")
+    Temp = GetData(ControlAccountData, 3, , "Control Account>= 8J6GM15223-02A")
 
     '@Ignore LineLabelNotUsed
 Done:

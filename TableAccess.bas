@@ -6,15 +6,16 @@ Private Const Module_Name As String = "TableAccess."
 Private Const TempWorkSheetName As String = "TempWorkSheet"
 
 Public Type TableType
-    Headers As Variant ' The table's HeaderRowRange
-    Body As Variant ' The table's DataBodyRage
-    Valid As String ' Error message if TableType invalid
+    Headers As Variant                           ' The table's HeaderRowRange
+    Body As Variant                              ' The table's DataBodyRage
+    Valid As String                              ' Error message if TableType invalid
 End Type
 
 Private Type ColumnDesignatorType
     ColumnName As String
     ColumnNumber As Long
 End Type
+
 Public Function GetData( _
        SearchTable As TableType, _
        Optional ByVal RowDesignator As Variant = "Empty", _
@@ -181,16 +182,18 @@ Public Function GetData( _
                 Case 0                           ' 1 row, unspecified columns, filter=0 rows; no data
                     GetData.Valid = "Empty"
                 Case 1                           ' 1 row, unspecified columns, filter=1 row; one row
-                    GetData.Body = GetRow(ThisSearchTable, RowNumber)
+                    GetData.Body = GetRow(ThisSearchTable, 1)
                     GetData.Valid = "Valid"
                 Case Else                        ' 1 row, unspecified columns, filter=multiple rows; one row
-                    GetData.Body = GetRow(ThisSearchTable, RowNumber)
+                    GetData.Body = GetRow(ThisSearchTable, 1)
                     GetData.Valid = "Valid"
                 End Select
             Else                                 ' 1 row, unspecified column, empty filter; entire row
-                GetData.Body = GetRow(ThisSearchTable, RowNumber)
+                GetData.Body = GetRow(ThisSearchTable, 1)
                 GetData.Valid = "Valid"
             End If                               ' ColumnFilter <> "Empty"
+            
+            GetData.Headers = ThisSearchTable.Headers
         End If                                   ' ColumnDesignator <> "Empty"
     Else                                         ' Empty RowDesignator
         If ColumnDesignator <> "Empty" Then      ' Valid ColumnDesignator
@@ -225,14 +228,14 @@ Public Function GetData( _
         End If                                   ' ColumnDesignator <> "Empty"
     End If                                       ' RowDesignator <> "Empty"
     
-    ' Delete the temporary worksheet
-    Dim TempDisplayAlerts As Boolean
-    TempDisplayAlerts = Application.DisplayAlerts
-    Application.DisplayAlerts = False
-    On Error Resume Next
-    ActiveWorkbook.Worksheets(TempWorkSheetName).Delete
-    On Error GoTo ErrorHandler
-    Application.DisplayAlerts = TempDisplayAlerts
+'    ' Delete the temporary worksheet
+'    Dim TempDisplayAlerts As Boolean
+'    TempDisplayAlerts = Application.DisplayAlerts
+'    Application.DisplayAlerts = False
+'    On Error Resume Next
+'    ActiveWorkbook.Worksheets(TempWorkSheetName).Delete
+'    On Error GoTo ErrorHandler
+'    Application.DisplayAlerts = TempDisplayAlerts
     
     '@Ignore LineLabelNotUsed
 Done:
@@ -487,9 +490,9 @@ Private Function ValidFilter( _
         Next I
         
         Dim FilterCriteria As String
-        FilterCriteria = Operator & Operand
+        FilterCriteria = " " & Operator & " " & """" & Operand & """"
         ValidFilter = SetUpSearchTable(FilterCriteria, ColumnNumber, SearchTable)
-    End If ' ColumnFilter = "Empty"
+    End If                                       ' ColumnFilter = "Empty"
     
     '@Ignore LineLabelNotUsed
 Done:
@@ -508,7 +511,45 @@ Private Function SetUpSearchTable( _
     Const Routine_Name As String = Module_Name & "GetFilteredData"
     On Error GoTo ErrorHandler
     
+    Dim I As Long
+    Dim SC As SearchClass
+    Dim Expression As String
     
+    Dim Coll As Collection
+    Set Coll = New Collection
+    
+    For I = LBound(SearchTable.Body, 1) To UBound(SearchTable.Body, 1)
+        Expression = Chr(34) & SearchTable.Body(I, FilterColumnNumber) & Chr(34) & FilterCriteria
+        If Evaluate(Expression) Then
+            Set SC = New SearchClass
+            SC.SetArray SearchTable, I
+            Coll.Add SC
+        End If
+    Next I
+    
+    Dim DataArray As TableType
+    ReDim DataArray.Body(Coll.Count, UBound(SearchTable.Headers, 2))
+    ReDim DataArray.Headers(1, UBound(SearchTable.Headers, 2))
+    DataArray.Valid = "Valid"
+    
+    For I = 1 To UBound(SearchTable.Headers, 2)
+        DataArray.Headers(1, I) = SearchTable.Headers(1, I)
+    Next I
+    
+    Dim RowArray As Variant
+    ReDim RowArray(UBound(SearchTable.Headers, 2))
+    
+    Dim J As Long
+    
+    For I = 1 To Coll.Count
+        RowArray = Coll(I).GetArray
+        
+        For J = 1 To UBound(SearchTable.Headers, 2)
+            DataArray.Body(I, J) = RowArray(J)
+        Next J
+    Next I
+    
+    SetUpSearchTable = DataArray
         
     '@Ignore LineLabelNotUsed
 Done:
@@ -519,18 +560,18 @@ ErrorHandler:
 End Function
 
 Function GetRow( _
-    SearchTable As TableType, _
-    ByVal RowNum As Long _
-    ) As Variant
+         SearchTable As TableType, _
+         ByVal RowNum As Long _
+         ) As Variant
     
     Const Routine_Name As String = Module_Name & "GetRow"
     On Error GoTo ErrorHandler
     
-    ReDim Ary(UBound(SearchTable.Headers, 1), 1)
+    ReDim Ary(1, UBound(SearchTable.Headers, 2))
     
     Dim I As Long
-    For I = 1 To UBound(SearchTable.Headers, 1)
-        Ary(I, 1) = SearchTable.Body(RowNum, I)
+    For I = 1 To UBound(SearchTable.Headers, 2)
+        Ary(1, I) = SearchTable.Body(RowNum, I)
     Next I
     
     GetRow = Ary
@@ -544,9 +585,9 @@ ErrorHandler:
 End Function
 
 Function GetColumn( _
-    SearchTable As TableType, _
-    ByVal ColumnNum As Long _
-    ) As Variant
+         SearchTable As TableType, _
+         ByVal ColumnNum As Long _
+         ) As Variant
     
     Const Routine_Name As String = Module_Name & "GetColumn"
     On Error GoTo ErrorHandler
@@ -594,6 +635,7 @@ End Function
 '    RaiseError Err.Number, Err.Source, Routine_Name, Err.Description
 '
 'End Function
+
 
 
 
