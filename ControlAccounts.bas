@@ -3,24 +3,38 @@ Option Explicit
 
 Private Const Module_Name As String = "ControlAccounts."
 
-Private ControlAccountHeaders As Variant
-Private ControlAccountData As TableType
-Private ControlAccounts As TableType
-Private ControlAccountNames As TableType
+Private ControlAccountTable As TableType
+Private DataTable As TableType
 
 Public Sub ControlAccountsInitialize()
 
     Const Routine_Name As String = Module_Name & "ControlAccountsInitialize"
     On Error GoTo ErrorHandler
 
-If Not IsArrayAllocated(ControlAccountData.Body) Then
-    ControlAccountData.Headers = ControlAccountsSheet.ListObjects("ControlAccountTable").HeaderRowRange
-    ControlAccountData.Body = ControlAccountsSheet.ListObjects("ControlAccountTable").DataBodyRange
-    ControlAccountData.Valid = "Valid"
-    ControlAccounts = GetData(ControlAccountData, , "Control Account")
-    ControlAccountNames = GetData(ControlAccountData, , "Control Account Name")
-End If
-'Erase ControlAccountData.Body
+    If Not IsArrayAllocated(ControlAccountTable.Body) Then
+        ControlAccountTable.Headers = ControlAccountsSheet.ListObjects("ControlAccountTable").HeaderRowRange
+        ControlAccountTable.Body = ControlAccountsSheet.ListObjects("ControlAccountTable").DataBodyRange
+        ControlAccountTable.Valid = "Valid"
+    End If
+
+    '@Ignore LineLabelNotUsed
+Done:
+    Exit Sub
+ErrorHandler:
+    DisplayError Routine_Name
+
+End Sub
+
+Public Sub DataTableInitialize()
+
+    Const Routine_Name As String = Module_Name & "DataTableInitialize"
+    On Error GoTo ErrorHandler
+
+    If Not IsArrayAllocated(DataTable.Body) Then
+        DataTable.Headers = DataSheet.ListObjects("DataTable").HeaderRowRange
+        DataTable.Body = DataSheet.ListObjects("DataTable").DataBodyRange
+        DataTable.Valid = "Valid"
+    End If
 
     '@Ignore LineLabelNotUsed
 Done:
@@ -36,39 +50,26 @@ Private Sub test()
     On Error GoTo ErrorHandler
     
     ControlAccountsInitialize
+    DataTableInitialize
     
     Dim Temp As TableType
     
-    Temp = GetData(ControlAccountData, , , "CAM = Dye")
-    Temp = GetData(ControlAccountData, 3, , "Control Account=8J6GM15223-02A")
-    Temp = GetData(ControlAccountData, 3, , "Control Account =8J6GM15223-02A")
-    Temp = GetData(ControlAccountData, 3, , "Control Account= 8J6GM15223-02A")
+    ' Get a specific row
+    Temp = GetData(ControlAccountTable, 3)
     
-    Temp = GetData(ControlAccountData, 3, , "Control Account < 8J6GM15223-02A")
-    Temp = GetData(ControlAccountData, 3, , "Control Account<8J6GM15223-02A")
-    Temp = GetData(ControlAccountData, 3, , "Control Account <= 8J6GM15223-02A")
-    Temp = GetData(ControlAccountData, 3, , "Control Account <> 8J6GM15223-02A")
-    Temp = GetData(ControlAccountData, 3, , "Control Account<=8J6GM15223-02A")
-    Temp = GetData(ControlAccountData, 3, , "Control Account<>8J6GM15223-02A")
-    Temp = GetData(ControlAccountData, 3, , "Control Account <8J6GM15223-02A")
-    Temp = GetData(ControlAccountData, 3, , "Control Account <=8J6GM15223-02A")
-    Temp = GetData(ControlAccountData, 3, , "Control Account <>8J6GM15223-02A")
-    Temp = GetData(ControlAccountData, 3, , "Control Account< 8J6GM15223-02A")
-    Temp = GetData(ControlAccountData, 3, , "Control Account<= 8J6GM15223-02A")
-    Temp = GetData(ControlAccountData, 3, , "Control Account<> 8J6GM15223-02A")
+    ' Get a specific column
+    Temp = GetData(ControlAccountTable, , "Control Account")
     
-    Temp = GetData(ControlAccountData, 3, , "Control Account > 8J6GM15223-02A")
-    Temp = GetData(ControlAccountData, 3, , "Control Account >= 8J6GM15223-02A")
+    ' Get a specific cell
+    Temp = GetData(ControlAccountTable, , , "Control Account=8G3SN04311-03")
     
-    Temp = GetData(ControlAccountData, 3, , "Control Account>8J6GM15223-02A")
-    Temp = GetData(ControlAccountData, 3, , "Control Account>=8J6GM15223-02A")
+    ' Get a collection of rows
+    Temp = GetData(ControlAccountTable, , , "Control Account <> 8G3SN04311-03")
+    Temp = GetData(ControlAccountTable, , , "Control Account < 8G3SN04311-03")
+    Temp = GetData(ControlAccountTable, , , "Control Account <= 8G3SN04311-03")
+    Temp = GetData(ControlAccountTable, , , "Control Account>8G3SN04311-03")
+    Temp = GetData(ControlAccountTable, , , "Control Account>=8G3SN04311-03")
     
-    Temp = GetData(ControlAccountData, 3, , "Control Account >8J6GM15223-02A")
-    Temp = GetData(ControlAccountData, 3, , "Control Account >=8J6GM15223-02A")
-    
-    Temp = GetData(ControlAccountData, 3, , "Control Account> 8J6GM15223-02A")
-    Temp = GetData(ControlAccountData, 3, , "Control Account>= 8J6GM15223-02A")
-
     '@Ignore LineLabelNotUsed
 Done:
     Exit Sub

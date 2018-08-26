@@ -93,7 +93,7 @@ ErrorHandler:
 End Function                                     ' NumberOfArrayDimensions
 
 Public Function IsArrayAllocated(ByVal Arr As Variant) As Boolean
-' http://www.cpearson.com/excel/isarrayallocated.aspx
+    ' http://www.cpearson.com/excel/isarrayallocated.aspx
     On Error Resume Next
     IsArrayAllocated = _
                      IsArray(Arr) And _
@@ -101,9 +101,6 @@ Public Function IsArrayAllocated(ByVal Arr As Variant) As Boolean
                      LBound(Arr, 1) <= UBound(Arr, 1)
     On Error GoTo 0
 End Function
-
-
-
 
 'Public Sub Log(ParamArray Msg() As Variant)
 '    ' http://analystcave.com/vba-proper-vba-error-handling/
@@ -139,4 +136,5 @@ End Function
 '    Close #filenumber
 '
 'End Sub                                          ' Log
+
 

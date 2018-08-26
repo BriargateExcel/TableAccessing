@@ -12,8 +12,8 @@ Option Explicit
 Private Ary As Variant
 
 Public Sub SetArray( _
-    SearchTable As TableType, _
-    RowNum As Long)
+       SearchTable As TableType, _
+       ByVal RowNum As Long)
     
     ' Assumes all arrays start at 1
     
@@ -29,3 +29,5 @@ End Sub
 Public Function GetArray() As Variant
     GetArray = Ary
 End Function
+
+
