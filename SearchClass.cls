@@ -9,6 +9,8 @@ Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
 
+' Class used to gather (Set) and return (Get) Table data for all tables
+
 Private Ary As Variant
 
 Public Sub SetArray( _

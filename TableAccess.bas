@@ -35,8 +35,9 @@ Public Function GetData( _
        Optional ByVal ColumnFilter As String = "Empty" _
        ) As TableType
        
+    ' Purpose
+    '   Return the subset of SearchTable as specified in the other parameters
     ' Assumptions
-    '   SearchTable is a valid table
     
     ' Future:
     ' Add provisions for multiple filters; "And" only; no "Or"
@@ -99,10 +100,7 @@ Public Function GetData( _
     '   All rows and columns
     '       RowDesignator is "Empty" and ColumnDesignator is "Empty" and ColumnFilter is "Empty"
     '   Makes no sense to specify a row and a filter
-    '       RowDesignator is numeric and ColumnDesignator is "Empty" and ColumnFilter evaluates to one row
-    '       RowDesignator is numeric and ColumnDesignator is "Empty" and ColumnFilter evaluates to multiple rows
-    '       RowDesignator is numeric and ColumnDesignator is specified and ColumnFilter evaluates to one row
-    '       RowDesignator is numeric and ColumnDesignator is specified and ColumnFilter evaluates to multiple rows
+    '       RowDesignator is numeric and ColumnFilter <> "Empty"
     '
     ' Error messages:
     '   "Error Table" if the SearchTable is invalid
@@ -121,6 +119,11 @@ Public Function GetData( _
     '
     Const Routine_Name As String = Module_Name & "GetData"
     On Error GoTo ErrorHandler
+    
+    If Left$(SearchTable.Valid, 5) = "Error" Then
+        GetData.Valid = "Error Table"
+        Exit Function
+    End If
     
     ' Verify that RowDesignator is valid
     Dim RowNumber As Long
@@ -255,11 +258,20 @@ Private Function ValidRowDesignator( _
         ByVal RowDesignator As Variant _
         ) As Variant
 
+    ' Purpose
+    '   Determine if RowDesignator is valid
+    '   Return the valid row number or "Empty" if valid
+    '   Return ValidRowDesignator = "Error RowDesignator Out of Range" or
+    '       "Error Row Designator" if invalid
     ' Assumptions
-    '   SearchTable is valid
     
     Const Routine_Name As String = Module_Name & "ValidRowDesignator"
     On Error GoTo ErrorHandler
+    
+    If Left$(SearchTable.Valid, 5) = "Error" Then
+        ValidRowDesignator.Valid = "Error Table"
+        Exit Function
+    End If
     
     If RowDesignator = "Empty" Then
         ' Empty is a valid entry; means return an entire column
@@ -293,11 +305,19 @@ Private Function ValidColumnDesignator( _
         ByVal ColumnDesignator As Variant _
         ) As ColumnDesignatorType
     
+    ' Purpose
+    '   Determine if ColumnDesignator or "Empty" if valid
+    '   Return the valid column name and number if valid
+    '   Return ValidColumnDesignator.ColumnName = "Error Column Name Not Found" if invalid
     ' Assumptions
-    '   SearchTable is valid
     
     Const Routine_Name As String = Module_Name & "ValidColumnDesignator"
     On Error GoTo ErrorHandler
+    
+    If Left$(SearchTable.Valid, 5) = "Error" Then
+        ValidColumnDesignator.ColumnName = "Error Table"
+        Exit Function
+    End If
     
     If ColumnDesignator = "Empty" Then
         ' "Empty" is a valid entry; means return an entire row
@@ -339,12 +359,16 @@ Private Function ValidFilter( _
     ' Purpose
     '   Determines if the ColumnFilter is valid
     '   If ColumnFilter valid, returns the filtered array
-    '   If ColumnFilter is invalid, sets ValidFilter.Valid to an error message
+    '   If ColumnFilter is invalid, returns ValidFilter.Valid to an error message
     ' Assumptions
-    '   SearchTable is valid
     
     Const Routine_Name As String = Module_Name & "ValidFilter"
     On Error GoTo ErrorHandler
+    
+    If Left$(SearchTable.Valid, 5) = "Error" Then
+        ValidFilter.Valid = "Error Table"
+        Exit Function
+    End If
     
     If ColumnFilter = "Empty" Then
         ' "Empty" is a valid ColumnFilter value
@@ -518,78 +542,6 @@ ErrorHandler:
 
 End Function
 
-Private Function SetUpSearchTableDict( _
-        SearchTable As TableType, _
-        ByVal FilterCriteria As String, _
-        ByVal FilterColumnNumber As Long _
-        ) As TableType
-        
-    ' Purpose
-    '   Filters Searchtable according to the FilterCriteria
-    '   If ColumnFilter valid, returns the filtered array
-    '   If ColumnFilter is invalid, sets SetUpSearchTable.Valid to an error message
-    ' Assumptions
-    '   SearchTable is valid
-    '   All arrays start at 1
-    
-    Const Routine_Name As String = Module_Name & "SetUpSearchTableDict"
-    On Error GoTo ErrorHandler
-    
-    Dim I As Long
-    Dim SearchElement As SearchClass
-    Dim Expression As String
-    
-    Dim SearchDictionary As Scripting.Dictionary
-    Set SearchDictionary = New Scripting.Dictionary
-    
-    For I = 1 To UBound(SearchTable.Body, 1)
-        Expression = Chr$(34) & SearchTable.Body(I, FilterColumnNumber) & Chr$(34) & FilterCriteria
-        If Evaluate(Expression) Then
-            Set SearchElement = New SearchClass
-            SearchElement.SetArray SearchTable, I
-            SearchDictionary.Add I, SearchElement
-        End If
-    Next I
-    
-    If SearchDictionary.Count = 0 Then
-        SetUpSearchTableDict.Valid = "Error No data found"
-        Exit Function
-    End If
-    
-    Dim DataArray As TableType
-    ReDim DataArray.Body(SearchDictionary.Count, UBound(SearchTable.Headers, 2))
-    ReDim DataArray.Headers(1, UBound(SearchTable.Headers, 2))
-    DataArray.Valid = "Valid"
-    
-    DataArray.Headers = SearchTable.Headers
-    
-    Dim RowArray As Variant
-    ReDim RowArray(UBound(SearchTable.Headers, 2))
-    
-    Dim J As Long
-    
-    For I = 0 To SearchDictionary.Count - 1
-        If I Mod 1000 = 0 Then
-            Debug.Print I
-            DoEvents
-        End If
-        RowArray = SearchDictionary.Items(I).GetArray
-        
-        For J = 1 To UBound(SearchTable.Headers, 2)
-            DataArray.Body(I, J) = RowArray(J)
-        Next J
-    Next I
-    
-    SetUpSearchTableDict = DataArray
-        
-    '@Ignore LineLabelNotUsed
-Done:
-    Exit Function
-ErrorHandler:
-    RaiseError Err.Number, Err.Source, Routine_Name, Err.Description
-
-End Function
-
 Private Function SetUpSearchTableColl( _
         SearchTable As TableType, _
         ByVal FilterCriteria As String, _
@@ -597,15 +549,19 @@ Private Function SetUpSearchTableColl( _
         ) As TableType
         
     ' Purpose
+    '   Collection speed test; seems faster than Scripting.Dictionary
     '   Filters Searchtable according to the FilterCriteria
     '   If ColumnFilter valid, returns the filtered array
-    '   If ColumnFilter is invalid, sets SetUpSearchTable.Valid to an error message
+    '   If ColumnFilter is invalid, returns SetUpSearchTable.Valid to an error message
     ' Assumptions
-    '   SearchTable is valid
-    '   All arrays start at 1
     
     Const Routine_Name As String = Module_Name & "SetUpSearchTableColl"
     On Error GoTo ErrorHandler
+    
+    If Left$(SearchTable.Valid, 5) = "Error" Then
+        SetUpSearchTableColl.Valid = "Error Table"
+        Exit Function
+    End If
     
     Dim I As Long
     Dim SearchElement As SearchClass
@@ -640,17 +596,16 @@ Private Function SetUpSearchTableColl( _
     
     Dim J As Long
     
-    For I = 1 To SearchCollection.Count
-        If I Mod 1000 = 0 Then
-            Debug.Print I
-            DoEvents
-        End If
-        RowArray = SearchCollection(I).GetArray
-        
+    I = 1
+    Dim temp As Variant
+    For Each temp In SearchCollection
+        RowArray = temp.GetArray
         For J = 1 To UBound(SearchTable.Headers, 2)
             DataArray.Body(I, J) = RowArray(J)
         Next J
-    Next I
+        I = I + 1
+    Next temp
+    
     
     SetUpSearchTableColl = DataArray
         
@@ -663,17 +618,21 @@ ErrorHandler:
 End Function
 
 Private Function GetRow( _
-         SearchTable As TableType, _
-         ByVal RowNum As Long _
-         ) As Variant
+        SearchTable As TableType, _
+        ByVal RowNum As Long _
+        ) As Variant
         
     ' Purpose
     '   Returns the row designated by RowNum
     ' Assumptions
-    '   SearchTable is valid
     
     Const Routine_Name As String = Module_Name & "GetRow"
     On Error GoTo ErrorHandler
+    
+    If Left$(SearchTable.Valid, 5) = "Error" Then
+        GetRow.Valid = "Error Table"
+        Exit Function
+    End If
     
     Dim Ary As Variant
     ReDim Ary(1, UBound(SearchTable.Headers, 2))
@@ -694,17 +653,21 @@ ErrorHandler:
 End Function
 
 Private Function GetColumn( _
-         SearchTable As TableType, _
-         ByVal ColumnNum As Long _
-         ) As Variant
+        SearchTable As TableType, _
+        ByVal ColumnNum As Long _
+        ) As Variant
         
     ' Purpose
     '   Returns the column designated by ColumnNum
     ' Assumptions
-    '   SearchTable is valid
     
     Const Routine_Name As String = Module_Name & "GetColumn"
     On Error GoTo ErrorHandler
+    
+    If Left$(SearchTable.Valid, 5) = "Error" Then
+        GetColumn.Valid = "Error Table"
+        Exit Function
+    End If
     
     Dim Ary As Variant
     ReDim Ary(UBound(SearchTable.Body, 1), 1)
@@ -723,3 +686,5 @@ ErrorHandler:
     RaiseError Err.Number, Err.Source, Routine_Name, Err.Description
 
 End Function
+
+

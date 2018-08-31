@@ -102,39 +102,4 @@ Public Function IsArrayAllocated(ByVal Arr As Variant) As Boolean
     On Error GoTo 0
 End Function
 
-'Public Sub Log(ParamArray Msg() As Variant)
-'    ' http://analystcave.com/vba-proper-vba-error-handling/
-'    ' https://excelmacromastery.com/vba-error-handling/
-'
-'    Dim FileName As String
-'    FileName = GetMainWorkbook.Path & "\error_log.txt"
-'    Dim MsgString As Variant
-'    Dim I As Long
-'
-'    Exit Sub
-'
-'    ' Archive file at certain size
-'    If FileLen(FileName) > 20000 Then
-'        FileCopy FileName, _
-'                 Replace(FileName, ".txt", _
-'                         Format$(Now, "ddmmyyyy hhmmss.txt"))
-'        Kill FileName
-'    End If
-'
-'    ' Open the file to write
-'    Dim filenumber As Long
-'    filenumber = FreeFile
-'    Open FileName For Append As #filenumber
-'
-'    MsgString = Msg(LBound(Msg))
-'    For I = LBound(Msg) + 1 To UBound(Msg)
-'        MsgString = "," & MsgString & Msg(I)
-'    Next I
-'
-'    Print #filenumber, Now & ":  " & MsgString
-'
-'    Close #filenumber
-'
-'End Sub                                          ' Log
-
 
