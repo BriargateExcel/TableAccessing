@@ -120,6 +120,7 @@ Public Function GetData( _
     Const Routine_Name As String = Module_Name & "GetData"
     On Error GoTo ErrorHandler
     
+    ' Verify that SearchTable is valid
     If Left$(SearchTable.Valid, 5) = "Error" Then
         GetData.Valid = "Error Table"
         Exit Function
@@ -187,16 +188,8 @@ Public Function GetData( _
     If RowDesignator <> "Empty" Then             ' Valid RowDesignator
         If ColumnDesignator <> "Empty" Then      ' Valid ColumnDesignator
             If ColumnFilter <> "Empty" Then      ' Valid ColumnFilter
-                Select Case RowCount
-                Case 0                           ' 1 row, 1 column, filter=0 rows; no data
-                    GetData.Valid = "Empty"
-                Case 1                           ' 1 row, 1 column, filter=1 row; one cell
-                    GetData.Body = ThisSearchTable.Body(RowNumber, ColumnNumber)
-                    GetData.Valid = "Valid"
-                Case Else                        ' 1 row, 1 column, filter=multiple rows; one cell
-                    GetData.Body = ThisSearchTable.Body(RowNumber, ColumnNumber)
-                    GetData.Valid = "Valid"
-                End Select
+                ' The case where RowDesignator <> "Empty" and ColumnFilter <> "Empty" cannot exist
+                GetData.Valid = "Error Can't have a specific row and a column filter"
             Else                                 ' 1 row, 1 column, empty filter; one cell
                 GetData.Body = ThisSearchTable.Body(RowNumber, ColumnNumber)
                 GetData.Valid = "Valid"
@@ -208,7 +201,6 @@ Public Function GetData( _
                 GetData.Body = GetRow(ThisSearchTable, RowDesignator)
                 GetData.Valid = "Valid"
             End If                               ' ColumnFilter <> "Empty"
-            
         End If                                   ' ColumnDesignator <> "Empty"
     Else                                         ' Empty RowDesignator
         If ColumnDesignator <> "Empty" Then      ' Valid ColumnDesignator
@@ -216,7 +208,7 @@ Public Function GetData( _
                 Select Case RowCount
                 Case 0                           ' unspecified row, 1 column, filter=0 rows; no data
                     GetData.Valid = "Empty"
-                Case 1                           ' unspecified row, 1 column, filter=1 row, one cell
+                Case 1                           ' unspecified row, 1 column, filter=1 row; one cell
                     GetData.Body = GetColumn(ThisSearchTable, ColumnNumber)
                     GetData.Valid = "Valid"
                 Case Else                        ' unspecified row, 1 column, filter=multiple rows; one column
@@ -268,6 +260,7 @@ Private Function ValidRowDesignator( _
     Const Routine_Name As String = Module_Name & "ValidRowDesignator"
     On Error GoTo ErrorHandler
     
+    ' Verify that SearchTable is valid
     If Left$(SearchTable.Valid, 5) = "Error" Then
         ValidRowDesignator.Valid = "Error Table"
         Exit Function
@@ -279,6 +272,7 @@ Private Function ValidRowDesignator( _
     Else
         Select Case VarType(RowDesignator)
         Case vbInteger, vbLong
+            ' RowDesignator is numeric
             ' Verify that RowDesignator is in the range of the table's rows
             If RowDesignator >= 1 And RowDesignator <= UBound(SearchTable.Body, 1) Then
                 ValidRowDesignator = RowDesignator
@@ -314,6 +308,7 @@ Private Function ValidColumnDesignator( _
     Const Routine_Name As String = Module_Name & "ValidColumnDesignator"
     On Error GoTo ErrorHandler
     
+    ' Verify that SearchTable is valid
     If Left$(SearchTable.Valid, 5) = "Error" Then
         ValidColumnDesignator.ColumnName = "Error Table"
         Exit Function
@@ -365,6 +360,7 @@ Private Function ValidFilter( _
     Const Routine_Name As String = Module_Name & "ValidFilter"
     On Error GoTo ErrorHandler
     
+    ' Verify that SearchTable is valid
     If Left$(SearchTable.Valid, 5) = "Error" Then
         ValidFilter.Valid = "Error Table"
         Exit Function
@@ -386,6 +382,7 @@ Private Function ValidFilter( _
         Dim ColumnName As String
         Dim ColumnNumber As Long
         For I = 1 To Len(ColumnFilter) - 1
+            ' Iterate through ColumnFilter looking for "=", "<", or ">"
             PrevChar = ThisChar
             ThisChar = Mid$(ColumnFilter, I, 1)
             NextChar = Mid$(ColumnFilter, I + 1, 1)
@@ -414,7 +411,7 @@ Private Function ValidFilter( _
                     Operand = Mid$(ColumnFilter, I + 1, Len(ColumnFilter) - I)
                 End If
                 
-            Case "<"
+            Case "<"                             ' ThisChar = "<"
                 EndOfColumnName = I - 1
                 While Mid$(ColumnFilter, EndOfColumnName, 1) = " "
                     EndOfColumnName = EndOfColumnName - 1
@@ -459,7 +456,7 @@ Private Function ValidFilter( _
                 
                     Operand = Mid$(ColumnFilter, StartOfOperand, Len(ColumnFilter) - StartOfOperand + 1)
                     Exit For
-                Case Else
+                Case Else                        ' NextChar <> "=" and NextChar <> ">"
                     Operator = "<"
                     
                     StartOfOperand = I + 1
@@ -478,7 +475,7 @@ Private Function ValidFilter( _
                     Operand = Mid$(ColumnFilter, StartOfOperand, Len(ColumnFilter) - StartOfOperand + 1)
                     Exit For
                 End Select
-            Case ">"
+            Case ">"                             ' ThisChar = ">"
                 EndOfColumnName = I - 1
                 While Mid$(ColumnFilter, EndOfColumnName, 1) = " "
                     EndOfColumnName = EndOfColumnName - 1
@@ -528,7 +525,7 @@ Private Function ValidFilter( _
         
         Dim FilterCriteria As String
         FilterCriteria = " " & Operator & " " & """" & Operand & """"
-        ValidFilter = SetUpSearchTableColl(SearchTable, FilterCriteria, ColumnNumber)
+        ValidFilter = SetUpSearchTable(SearchTable, FilterCriteria, ColumnNumber)
         If Left$(ValidFilter.Valid, 5) = "Error" Then
             Exit Function
         End If
@@ -542,24 +539,24 @@ ErrorHandler:
 
 End Function
 
-Private Function SetUpSearchTableColl( _
+Private Function SetUpSearchTable( _
         SearchTable As TableType, _
         ByVal FilterCriteria As String, _
         ByVal FilterColumnNumber As Long _
         ) As TableType
         
     ' Purpose
-    '   Collection speed test; seems faster than Scripting.Dictionary
     '   Filters Searchtable according to the FilterCriteria
     '   If ColumnFilter valid, returns the filtered array
-    '   If ColumnFilter is invalid, returns SetUpSearchTable.Valid to an error message
+    '   If ColumnFilter is invalid, sets SetUpSearchTable.Valid to an error message
     ' Assumptions
     
     Const Routine_Name As String = Module_Name & "SetUpSearchTableColl"
     On Error GoTo ErrorHandler
     
+    ' Verify that SearchTable is valid
     If Left$(SearchTable.Valid, 5) = "Error" Then
-        SetUpSearchTableColl.Valid = "Error Table"
+        SetUpSearchTable.Valid = "Error Table"
         Exit Function
     End If
     
@@ -570,6 +567,7 @@ Private Function SetUpSearchTableColl( _
     Dim SearchCollection As Collection
     Set SearchCollection = New Collection
     
+    ' Put all the rows that match FilterCriteris into a collection
     For I = 1 To UBound(SearchTable.Body, 1)
         Expression = Chr$(34) & SearchTable.Body(I, FilterColumnNumber) & Chr$(34) & FilterCriteria
         If Evaluate(Expression) Then
@@ -580,7 +578,7 @@ Private Function SetUpSearchTableColl( _
     Next I
     
     If SearchCollection.Count = 0 Then
-        SetUpSearchTableColl.Valid = "Error No data found"
+        SetUpSearchTable.Valid = "Error No data found"
         Exit Function
     End If
     
@@ -596,18 +594,18 @@ Private Function SetUpSearchTableColl( _
     
     Dim J As Long
     
+    ' Extract all the elements in the collection and put them into DataArray
     I = 1
-    Dim temp As Variant
-    For Each temp In SearchCollection
-        RowArray = temp.GetArray
+    Dim ValidRow As Variant
+    For Each ValidRow In SearchCollection
+        RowArray = ValidRow.GetArray
         For J = 1 To UBound(SearchTable.Headers, 2)
             DataArray.Body(I, J) = RowArray(J)
         Next J
         I = I + 1
-    Next temp
+    Next ValidRow
     
-    
-    SetUpSearchTableColl = DataArray
+    SetUpSearchTable = DataArray
         
     '@Ignore LineLabelNotUsed
 Done:
@@ -629,6 +627,7 @@ Private Function GetRow( _
     Const Routine_Name As String = Module_Name & "GetRow"
     On Error GoTo ErrorHandler
     
+    ' Verify that SearchTable is valid
     If Left$(SearchTable.Valid, 5) = "Error" Then
         GetRow.Valid = "Error Table"
         Exit Function
@@ -664,6 +663,7 @@ Private Function GetColumn( _
     Const Routine_Name As String = Module_Name & "GetColumn"
     On Error GoTo ErrorHandler
     
+    ' Verify that SearchTable is valid
     If Left$(SearchTable.Valid, 5) = "Error" Then
         GetColumn.Valid = "Error Table"
         Exit Function
