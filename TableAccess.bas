@@ -10,11 +10,13 @@ Public Type TableType
     '   Only has row 1 (first parameter)
     '   The column names are in the column (second) parameter of the array
     '   If it exists, Row 0 is not used
+    '   If it exists, Column 0 is not used
     ' Body
     '   The table's DataBodyRage
     '   Each table row is designated by the first (row) parameter of the array
     '   Each column is designated by the second (column) parameter of the array
     '   If it exists, Row 0 is not used
+    '   If it exists, Column 0 is not used
     ' Valid
     '   "Valid" if TableType valid
     '   Error message if TableType invalid
@@ -27,6 +29,41 @@ Private Type ColumnDesignatorType
     ColumnName As String
     ColumnNumber As Long
 End Type
+
+Public Sub LoadTable( _
+       ByVal ExcelTable As ListObject, _
+       ByRef DataTable As TableType)
+       
+    ' Purpose
+    ' Loads the contents of an Excel table (ExcelTable)
+    '   into a TableType data structure (DataTable)
+    ' Errors are reported via standard error handling logic
+    ' Assumptions
+    ' The structure of ColumnFilter is column name
+    '   then a boolean comparator then the operand.
+
+    Const Routine_Name As String = Module_Name & "LoadTable"
+    On Error GoTo ErrorHandler
+    
+    Dim Sht As Worksheet
+    Set Sht = Worksheets(ExcelTable.Parent.Name)
+    
+    Dim TableName As String
+    TableName = ExcelTable.Name
+
+    If Not IsArrayAllocated(DataTable.Body) Then
+        DataTable.Headers = Sht.ListObjects(TableName).HeaderRowRange
+        DataTable.Body = Sht.ListObjects(TableName).DataBodyRange
+        DataTable.Valid = "Valid"
+    End If
+
+    '@Ignore LineLabelNotUsed
+Done:
+    Exit Sub
+ErrorHandler:
+    RaiseError Err.Number, Err.Source, Routine_Name, Err.Description
+
+End Sub
 
 Public Function GetData( _
        SearchTable As TableType, _
@@ -356,6 +393,8 @@ Private Function ValidFilter( _
     '   If ColumnFilter valid, returns the filtered array
     '   If ColumnFilter is invalid, returns ValidFilter.Valid to an error message
     ' Assumptions
+    ' The structure of ColumnFilter is column name
+    '   then a boolean comparator then the operand.
     
     Const Routine_Name As String = Module_Name & "ValidFilter"
     On Error GoTo ErrorHandler
