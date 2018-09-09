@@ -46,7 +46,7 @@ Public Sub LoadTable( _
     On Error GoTo ErrorHandler
     
     Dim Sht As Worksheet
-    Set Sht = Worksheets(ExcelTable.Parent.Name)
+    Set Sht = MainWorkbook.Worksheets(ExcelTable.Parent.Name)
     
     Dim TableName As String
     TableName = ExcelTable.Name
