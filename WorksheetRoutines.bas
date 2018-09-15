@@ -1,6 +1,6 @@
 Attribute VB_Name = "WorksheetRoutines"
 Option Explicit
-'@Folder("Worksheets.WorksheetRoutines")
+'@Folder("TableAccess.Worksheets.WorksheetRoutines")
 
 Private Const Module_Name As String = "WorksheetRoutines."
 

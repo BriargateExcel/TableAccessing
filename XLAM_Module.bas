@@ -1,6 +1,6 @@
 Attribute VB_Name = "XLAM_Module"
 Option Explicit
-'@Folder("Basics.XLAM_Module")
+'@Folder("TableAccess.Basics.XLAM_Module")
 
 Private Const Module_Name As String = "XLAM_Module."
 

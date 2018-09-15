@@ -8,7 +8,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
-
+'@Folder("TableAccess.Search.SearchClass")
 ' Class used to gather (Set) and return (Get) Table data for all tables
 
 Private Ary As Variant

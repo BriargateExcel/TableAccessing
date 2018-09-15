@@ -1,6 +1,6 @@
 Attribute VB_Name = "SharedRoutines"
 Option Explicit
-'@Folder("Basics.SharedRoutines")
+'@Folder("TableAccess.Basics.SharedRoutines")
 
 Private Const Module_Name As String = "SharedRoutines."
 

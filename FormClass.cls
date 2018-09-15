@@ -8,7 +8,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
-'@Folder("Forms.FormClass")
+'@Folder("TableAccess.Forms.FormClass")
 
 Private Const Module_Name As String = "FormClass."
 

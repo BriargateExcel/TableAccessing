@@ -1,6 +1,6 @@
 Attribute VB_Name = "Logo_Background_Colors"
 Option Explicit
-'@Folder("Basics.Logo_Background_Colors")
+'@Folder("TableAccess.Basics.Logo_Background_Colors")
 
 Private Const Module_Name As String = "Logo_Background_Colors."
 

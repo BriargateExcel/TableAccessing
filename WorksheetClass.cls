@@ -8,7 +8,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
 Option Explicit
-'@Folder("Worksheets.WorksheetClass")
+'@Folder("TableAccess.Worksheets.WorksheetClass")
 
 Private pWorksheet As Worksheet
 Private pName As String

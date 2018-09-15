@@ -8,7 +8,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
-'@Folder("Events.EventClass")
+'@Folder("TableAccess.Events.EventClass")
 
 Private Const Module_Name As String = "EventClass."
 
